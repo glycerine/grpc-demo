@@ -1,0 +1,45 @@
+syntax = "proto3";
+package streambigfile;
+
+message BigFileChunk {
+    string    Filepath    = 1;
+    int64     SizeInBytes = 2;
+    fixed64   SendTime    = 3;
+
+    // Blake2B checksum of Data.
+    bytes     Blake2B     = 4;
+    
+    // Cumulative Blake2B of all
+    // Chunks up to and including
+    // this one.
+    bytes     Blake2BCumulative = 5;    
+    bytes     Data        = 6;
+
+    // It is not strictly
+    // necessary to chop the
+    // Data into chunks, but
+    // may be convenient to
+    // avoid excessive memory
+    // use.
+    // 
+    // Fields Data and Blake2B represent
+    // just this chunk.
+    //
+    int64     ChunkNumber      = 7;
+
+    // Be sure to set IsLastChunk to true
+    // if this is the last chunk.
+    bool      IsLastChunk = 8;
+}
+
+message BigFileAck {
+    string    Filepath         = 1;
+    int64     SizeInBytes      = 2;
+    fixed64   RecvTime         = 3;
+    bytes     WholeFileBlake2B = 4;
+    string    Err              = 5;
+}
+
+service Peer {
+    rpc SendFile(stream BigFileChunk) returns (BigFileAck) {}
+}
