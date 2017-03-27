@@ -20,15 +20,17 @@ import (
 )
 
 type client struct {
-	hasher    hash.Hash
-	nextChunk int64
+	hasher     hash.Hash
+	nextChunk  int64
+	peerClient pb.PeerClient
 }
 
-func newClient() *client {
+func newClient(conn *grpc.ClientConn) *client {
 	h, err := blake2b.New(nil)
 	panicOn(err)
 	return &client{
-		hasher: h,
+		hasher:     h,
+		peerClient: pb.NewPeerClient(conn),
 	}
 }
 
@@ -37,13 +39,13 @@ func (c *client) startNewFile() {
 	c.nextChunk = 0
 }
 
-func (c *client) runSendFile(client pb.PeerClient, path string, data []byte, maxChunkSize int) error {
+func (c *client) runSendFile(path string, data []byte, maxChunkSize int) error {
 	p("client runSendFile(path='%s') starting", path)
 
 	c.startNewFile()
-	stream, err := client.SendFile(context.Background())
+	stream, err := c.peerClient.SendFile(context.Background())
 	if err != nil {
-		grpclog.Fatalf("%v.SendFile(_) = _, %v", client, err)
+		grpclog.Fatalf("%v.SendFile(_) = _, %v", c.peerClient, err)
 	}
 	n := len(data)
 	numChunk := n / maxChunkSize
@@ -163,16 +165,15 @@ func main() {
 		grpclog.Fatalf("fail to dial: %v", err)
 	}
 	defer conn.Close()
-	client := pb.NewPeerClient(conn)
 
 	// SendFile
-	c := newClient()
+	c := newClient(conn)
 	data := []byte("hello peer, it is nice to meet you!!")
-	err = c.runSendFile(client, "file1", data, 3)
+	err = c.runSendFile("file1", data, 3)
 	panicOn(err)
 
 	data2 := []byte("second set of data should be kept separate!")
-	err = c.runSendFile(client, "file2", data2, 3)
+	err = c.runSendFile("file2", data2, 3)
 	panicOn(err)
 
 	n := 1 << 29 // test with 512MB file. Works with up to 1MB or 2MB chunks.
@@ -184,35 +185,24 @@ func main() {
 
 	c2done := make(chan struct{})
 
-	//testOverlappingSends := true
-	testOverlappingSends := false
-
 	// overlap two sends to different paths
 	go func() {
-		if testOverlappingSends {
-			time.Sleep(200 * time.Millisecond)
-			p("after 200msec of sleep, comencing bigfile3...")
-			conn2, err := grpc.Dial(serverAddr, opts...)
-			if err != nil {
-				grpclog.Fatalf("conn2 error on grpc.Dial: %v", err)
-			}
-			defer conn2.Close()
+		time.Sleep(10 * time.Millisecond)
+		p("after 10msec of sleep, comencing bigfile3...")
 
-			client2 := pb.NewPeerClient(conn2)
-			c2 := newClient()
-			t0 := time.Now()
-			err = c2.runSendFile(client2, "bigfile3", data3, chunkSz)
-			t1 := time.Now()
-			panicOn(err)
-			mb := float64(len(data3)) / float64(1<<20)
-			elap := t1.Sub(t0)
-			p("c2: elap time to send %v MB was %v => %.03f MB/sec", mb, elap, mb/(float64(elap)/1e9))
-		}
+		c2 := newClient(conn)
+		t0 := time.Now()
+		err = c2.runSendFile("bigfile3", data3, chunkSz)
+		t1 := time.Now()
+		panicOn(err)
+		mb := float64(len(data3)) / float64(1<<20)
+		elap := t1.Sub(t0)
+		p("c2: elap time to send %v MB was %v => %.03f MB/sec", mb, elap, mb/(float64(elap)/1e9))
 		close(c2done)
 	}()
 
 	t0 := time.Now()
-	err = c.runSendFile(client, "bigfile4", data3, chunkSz)
+	err = c.runSendFile("bigfile4", data3, chunkSz)
 	t1 := time.Now()
 	panicOn(err)
 	mb := float64(len(data3)) / float64(1<<20)
