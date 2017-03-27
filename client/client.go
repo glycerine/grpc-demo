@@ -81,8 +81,8 @@ func (c *client) runSendFile(client pb.PeerClient, path string, data []byte, max
 			// EOF?
 			if err == io.EOF {
 				if !nk.IsLastChunk {
-					panic(fmt.Sprintf("we got io.EOF before "+
-						"the last chunk! At: %v of %v", nk.ChunkNumber, numChunk))
+					panic(fmt.Sprintf("'%s' we got io.EOF before "+
+						"the last chunk! At: %v of %v", path, nk.ChunkNumber, numChunk))
 				} else {
 					break
 				}
@@ -184,13 +184,14 @@ func main() {
 
 	c2done := make(chan struct{})
 
-	testOverlappingSends := true
-	//testOverlappingSends := false
+	//testOverlappingSends := true
+	testOverlappingSends := false
 
 	// overlap two sends to different paths
 	go func() {
 		if testOverlappingSends {
 			time.Sleep(200 * time.Millisecond)
+			p("after 200msec of sleep, comencing bigfile3...")
 			conn2, err := grpc.Dial(serverAddr, opts...)
 			if err != nil {
 				grpclog.Fatalf("conn2 error on grpc.Dial: %v", err)

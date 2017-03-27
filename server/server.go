@@ -39,7 +39,7 @@ func (s *PeerServer) Reset() {
 
 // implement pb.PeerServer interface
 func (s *PeerServer) SendFile(stream pb.Peer_SendFileServer) error {
-	//p("peer.Server SendFile starting!")
+	p("peer.Server SendFile starting!")
 	var chunkCount int64
 	path := ""
 	var bc int64
@@ -81,7 +81,7 @@ func (s *PeerServer) SendFile(stream pb.Peer_SendFileServer) error {
 		// INVAR: we have a chunk
 		if !firstChunkSeen {
 			if nk.Filepath != "" {
-				fd, err = os.Create(nk.Filepath)
+				fd, err = os.Create(nk.Filepath + fmt.Sprintf("__%v", time.Now()))
 				if err != nil {
 					return err
 				}
