@@ -7,7 +7,7 @@ import (
 )
 
 type ClientConfig struct {
-	Tls                bool // use SSH tunnel if false
+	Ssh                bool // use Tls if false
 	AllowNewServer     bool // only give once to prevent MITM.
 	CertPath           string
 	KeyPath            string
@@ -24,7 +24,7 @@ type ClientConfig struct {
 
 func (c *ClientConfig) DefineFlags(fs *flag.FlagSet) {
 	fs.BoolVar(&c.AllowNewServer, "new", false, "allow new server host key to be recognized and stored in known-hosts")
-	fs.BoolVar(&c.Tls, "tls", false, "Use TLS as well (ssh by default)")
+	fs.BoolVar(&c.Ssh, "ssh", false, "Use SSH for security (default is TLS)")
 	fs.StringVar(&c.CertPath, "cert_file", "testdata/server1.pem", "The TLS cert file")
 	fs.StringVar(&c.KeyPath, "key_file", "testdata/server1.key", "The TLS key file")
 	fs.StringVar(&c.ServerHost, "host", "127.0.0.1", "host IP address or name to connect to")
@@ -44,7 +44,7 @@ func (c *ClientConfig) DefineFlags(fs *flag.FlagSet) {
 
 func (c *ClientConfig) ValidateConfig() error {
 
-	if c.Tls {
+	if !c.Ssh {
 		if c.KeyPath == "" {
 			return fmt.Errorf("must provide -key_file under TLS")
 		}

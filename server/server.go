@@ -46,15 +46,25 @@ func (s *PeerServer) SendFile(stream pb.Peer_SendFileServer) error {
 	s.Reset()
 
 	var finalChecksum []byte
+	var fd *os.File
 
 	defer func() {
+		if fd != nil {
+			fd.Close()
+		}
 		p("this server.SendFile() call got %v chunks, with "+
 			"final checksum '%x'", chunkCount, finalChecksum)
 	}()
 
+	firstChunkSeen := false
+
 	for {
 		nk, err := stream.Recv()
 		if err == io.EOF {
+			if nk != nil && len(nk.Data) > 0 {
+				// we are assuming that this never happens!
+				panic("we need to save this last chunk too!")
+			}
 			finalChecksum = []byte(s.hasher.Sum(nil))
 			endTime := time.Now()
 			return stream.SendAndClose(&pb.BigFileAck{
@@ -69,6 +79,16 @@ func (s *PeerServer) SendFile(stream pb.Peer_SendFileServer) error {
 		}
 
 		// INVAR: we have a chunk
+		if !firstChunkSeen {
+			if nk.Filepath != "" {
+				fd, err = os.Create(nk.Filepath)
+				if err != nil {
+					return err
+				}
+			}
+			firstChunkSeen = true
+		}
+
 		s.hasher.Write(nk.Data)
 		cumul := []byte(s.hasher.Sum(nil))
 		if 0 != bytes.Compare(cumul, nk.Blake2BCumulative) {
@@ -79,6 +99,10 @@ func (s *PeerServer) SendFile(stream pb.Peer_SendFileServer) error {
 			path = nk.Filepath
 			p("peer.Server SendFile sees new file '%s'", path)
 		}
+		if path != "" && path != nk.Filepath {
+			panic(fmt.Errorf("confusing between two different streams! '%s' vs '%s'", path, nk.Filepath))
+		}
+
 		if nk.SizeInBytes != int64(len(nk.Data)) {
 			return fmt.Errorf("%v == nk.SizeInBytes != int64(len(nk.Data)) == %v", nk.SizeInBytes, int64(len(nk.Data)))
 		}
@@ -97,6 +121,25 @@ func (s *PeerServer) SendFile(stream pb.Peer_SendFileServer) error {
 		// TODO: user should store chunk somewhere here... or accumulate
 		// all the chunks in memory
 		// until ready to store it elsewhere; e.g. in boltdb.
+
+		// For example, we will write to the nk.Filepath, if specified.
+		if fd != nil {
+			rs := 0
+			for {
+				nw, err := fd.Write(nk.Data[rs:])
+				rs += nw
+				if rs == len(nk.Data) {
+					// wrote it all
+					break
+				}
+				if err == io.ErrShortWrite {
+					continue
+				}
+				if err != nil {
+					return err
+				}
+			}
+		}
 	}
 	return nil
 }
@@ -120,7 +163,8 @@ func main() {
 
 	var gRpcBindPort int
 	var gRpcHost string
-	if cfg.Tls {
+	if !cfg.Ssh {
+		// use TLS
 		gRpcBindPort = cfg.ExternalLsnPort
 		gRpcHost = cfg.Host
 
@@ -142,13 +186,15 @@ func main() {
 
 	var opts []grpc.ServerOption
 
-	if cfg.Tls {
+	if !cfg.Ssh {
+		// use TLS
 		creds, err := credentials.NewServerTLSFromFile(cfg.CertPath, cfg.KeyPath)
 		if err != nil {
 			grpclog.Fatalf("Failed to generate credentials %v", err)
 		}
 		opts = []grpc.ServerOption{grpc.Creds(creds)}
 	} else {
+		// use SSH
 		err = serverSshMain(os.Args[1:], cfg.Host,
 			cfg.ExternalLsnPort, cfg.InternalLsnPort)
 		panicOn(err)

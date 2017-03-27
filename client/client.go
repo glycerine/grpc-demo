@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"hash"
+	"io"
 	"log"
 	"os"
 	"time"
@@ -37,7 +38,7 @@ func (c *client) startNewFile() {
 }
 
 func (c *client) runSendFile(client pb.PeerClient, path string, data []byte, maxChunkSize int) error {
-	p("client runSendFile() starting")
+	p("client runSendFile(path='%s') starting", path)
 
 	c.startNewFile()
 	stream, err := client.SendFile(context.Background())
@@ -72,9 +73,18 @@ func (c *client) runSendFile(client pb.PeerClient, path string, data []byte, max
 		c.nextChunk++
 		nk.IsLastChunk = (i == lastChunk)
 
-		//p("client, on chunk %v of '%s', checksum='%x', and cumul='%x'", nk.ChunkNumber, nk.Filepath, nk.Blake2B, nk.Blake2BCumulative)
+		p("client, on chunk %v of '%s', checksum='%x', and cumul='%x'", nk.ChunkNumber, nk.Filepath, nk.Blake2B, nk.Blake2BCumulative)
 
 		if err := stream.Send(&nk); err != nil {
+			// EOF?
+			if err == io.EOF {
+				if !nk.IsLastChunk {
+					panic(fmt.Sprintf("we got io.EOF before "+
+						"the last chunk! At: %v of %v", nk.ChunkNumber, numChunk))
+				} else {
+					break
+				}
+			}
 			panic(err)
 			//grpclog.Fatalf("%v.Send() = %v", stream, err)
 		}
@@ -138,12 +148,10 @@ func main() {
 	}
 
 	var opts []grpc.DialOption
-	if cfg.Tls {
-		// with -tls flag
-		cfg.setupTLS(&opts)
-	} else {
-		// default to ssh
+	if cfg.Ssh {
 		cfg.setupSSH(&opts)
+	} else {
+		cfg.setupTLS(&opts)
 	}
 
 	serverAddr := fmt.Sprintf("%v:%v", cfg.ServerHost, cfg.ServerPort)
@@ -171,13 +179,43 @@ func main() {
 	data3 := SequentialPayload(int64(n))
 	//chunkSz := 1 << 22 // 4MB // GRPC will fail with EOF.
 	chunkSz := 1 << 20
+
+	c2done := make(chan struct{})
+
+	testOverlappingSends := true
+
+	// overlap two sends to different paths
+	go func() {
+		if testOverlappingSends {
+			time.Sleep(200 * time.Millisecond)
+			conn2, err := grpc.Dial(serverAddr, opts...)
+			if err != nil {
+				grpclog.Fatalf("conn2 error on grpc.Dial: %v", err)
+			}
+			defer conn2.Close()
+
+			client2 := pb.NewPeerClient(conn2)
+			c2 := newClient()
+			t0 := time.Now()
+			err = c2.runSendFile(client2, "bigfile3", data3, chunkSz)
+			t1 := time.Now()
+			panicOn(err)
+			mb := float64(len(data3)) / float64(1<<20)
+			elap := t1.Sub(t0)
+			p("c2: elap time to send %v MB was %v => %.03f MB/sec", mb, elap, mb/(float64(elap)/1e9))
+		}
+		close(c2done)
+	}()
+
 	t0 := time.Now()
-	err = c.runSendFile(client, "bigfile3", data3, chunkSz)
+	err = c.runSendFile(client, "bigfile4", data3, chunkSz)
 	t1 := time.Now()
 	panicOn(err)
 	mb := float64(len(data3)) / float64(1<<20)
 	elap := t1.Sub(t0)
-	p("elap time to send %v MB was %v => %.03f MB/sec", mb, elap, mb/(float64(elap)/1e9))
+	p("c: elap time to send %v MB was %v => %.03f MB/sec", mb, elap, mb/(float64(elap)/1e9))
+
+	<-c2done
 }
 
 func (cfg *ClientConfig) setupTLS(opts *[]grpc.DialOption) {

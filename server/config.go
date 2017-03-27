@@ -9,9 +9,8 @@ import (
 type ServerConfig struct {
 	Host string // ip address
 
-	// by default we use SSH encryption.
-	Tls         bool
-	Unencrypted bool
+	// by default we use TLS
+	Ssh bool
 
 	CertPath string
 	KeyPath  string
@@ -21,7 +20,7 @@ type ServerConfig struct {
 }
 
 func (c *ServerConfig) DefineFlags(fs *flag.FlagSet) {
-	fs.BoolVar(&c.Tls, "tls", false, "Use TLS instead of the default SSH.")
+	fs.BoolVar(&c.Ssh, "ssh", false, "Use SSH instead of the default TLS.")
 	fs.StringVar(&c.CertPath, "cert_file", "testdata/server1.pem", "The TLS cert file")
 	fs.StringVar(&c.KeyPath, "key_file", "testdata/server1.key", "The TLS key file")
 	fs.StringVar(&c.Host, "host", "127.0.0.1", "host IP address or name to bind")
@@ -31,7 +30,7 @@ func (c *ServerConfig) DefineFlags(fs *flag.FlagSet) {
 
 func (c *ServerConfig) ValidateConfig() error {
 
-	if c.Tls {
+	if !c.Ssh {
 		if c.KeyPath == "" {
 			return fmt.Errorf("must provide -key_file under TLS")
 		}
@@ -47,7 +46,7 @@ func (c *ServerConfig) ValidateConfig() error {
 		}
 	}
 
-	if !c.Tls && !c.Unencrypted {
+	if c.Ssh {
 		lsn, err := net.Listen("tcp", fmt.Sprintf(":%v", c.InternalLsnPort))
 		if err != nil {
 			return fmt.Errorf("internal port %v already bound", c.InternalLsnPort)

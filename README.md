@@ -16,10 +16,10 @@ transfer using TLS and using an embedded SSH tunnel. The ssh client and server a
 compiled into the binaries. You don't need to run a separate sshd on
 your host or docker container.
 
-By default we setup an SSH tunnel using https://github.com/glycerine/sshego
+Under flag `-ssh` to both client and server, we setup an SSH tunnel using https://github.com/glycerine/sshego
 and 4096-bit RSA keys. Key exchange is done with `kexAlgoCurve25519SHA256`.
 
-If you give the `-tls` flag to both client and server, we will use TLS.
+By default, we will use TLS.
 We assume that the necessary certs for your server host have been
 generated in the testdata/ directory, for example https://github.com/glycerine/grpc-demo/tree/master/testdata
 
@@ -71,7 +71,7 @@ at the console:
 
 # server
 $ cd ~/go/src/github.com/glycerine/grpc-demo
-$ ./server/server -tls
+$ ./server/server
 
 ~~~
 
@@ -84,7 +84,7 @@ Leave the server running, and open a separate terminal to start the client:
 
 # client
 $ cd ~/go/src/github.com/glycerine/grpc-demo
-$ ./client/client -tls
+$ ./client/client
 
  client runSendFile() starting
 
@@ -137,7 +137,7 @@ Your new RSA Public key is here (on host my-laptop.local):
 /Users/me/.ssh/.sshego.sshd.db/users/me/id_rsa.pub
 $
 $ # good, that generated an account. now start the server:
-$ ./server/server
+$ ./server/server -ssh
 
 ~~~
 
@@ -163,9 +163,9 @@ necessary the first time):
 # client
 $ cd ~/go/src/github.com/glycerine/grpc-demo
 $
-$ ./client/client -new # must give -new the first time, to store the server's host key.
+$ ./client/client -ssh -new # must give -new the first time, to store the server's host key.
 $
-$ ./client/client # now that host key is stored, must start without -new.
+$ ./client/client -ssh # now that host key is stored, must start without -new.
 $ # ... watch as three file transfers in a row happen, as the client/client.go code dictates
 
  client runSendFile() starting
