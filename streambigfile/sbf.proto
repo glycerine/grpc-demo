@@ -2,6 +2,8 @@ syntax = "proto3";
 package streambigfile;
 
 message BigFileChunk {
+    // Filepath is just an arbitrary
+    // name for this file.
     string    Filepath    = 1;
     int64     SizeInBytes = 2;
     fixed64   SendTime    = 3;
@@ -12,19 +14,25 @@ message BigFileChunk {
     // Cumulative Blake2B of all
     // Chunks up to and including
     // this one.
-    bytes     Blake2BCumulative = 5;    
+    bytes     Blake2BCumulative = 5;
+
+    // How big can Data be? I
+    // recommend no more than 1MB.
+    // I suggest 1MB chunking to be
+    // on the safe side. Above
+    // 2MB, I observe that gRPC
+    // starts to return EOF instead
+    // of conveying the messages.
+    // 
+    // Fields Data and Blake2B are
+    // for just a single chunk.
     bytes     Data        = 6;
 
-    // It is not strictly
-    // necessary to chop the
-    // Data into chunks, but
-    // may be convenient to
-    // avoid excessive memory
-    // use.
-    // 
-    // Fields Data and Blake2B represent
-    // just this chunk.
-    //
+    // gRPC guarantees in-order delivery
+    // of the stream, so ChunkNumber
+    // somewhat redundant. It is still
+    // useful for/as a delivery progress
+    // meter.
     int64     ChunkNumber      = 7;
 
     // Be sure to set IsLastChunk to true

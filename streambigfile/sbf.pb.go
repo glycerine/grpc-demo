@@ -37,6 +37,8 @@ var _ = math.Inf
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type BigFileChunk struct {
+	// Filepath is just an arbitrary
+	// name for this file.
 	Filepath    string `protobuf:"bytes,1,opt,name=Filepath,json=filepath,proto3" json:"Filepath,omitempty"`
 	SizeInBytes int64  `protobuf:"varint,2,opt,name=SizeInBytes,json=sizeInBytes,proto3" json:"SizeInBytes,omitempty"`
 	SendTime    uint64 `protobuf:"fixed64,3,opt,name=SendTime,json=sendTime,proto3" json:"SendTime,omitempty"`
@@ -46,17 +48,22 @@ type BigFileChunk struct {
 	// Chunks up to and including
 	// this one.
 	Blake2BCumulative []byte `protobuf:"bytes,5,opt,name=Blake2BCumulative,json=blake2BCumulative,proto3" json:"Blake2BCumulative,omitempty"`
-	Data              []byte `protobuf:"bytes,6,opt,name=Data,json=data,proto3" json:"Data,omitempty"`
-	// It is not strictly
-	// necessary to chop the
-	// Data into chunks, but
-	// may be convenient to
-	// avoid excessive memory
-	// use.
+	// How big can Data be? I
+	// recommend no more than 1MB.
+	// I suggest 1MB chunking to be
+	// on the safe side. Above
+	// 2MB, I observe that gRPC
+	// starts to return EOF instead
+	// of conveying the messages.
 	//
-	// Fields Data and Blake2B represent
-	// just this chunk.
-	//
+	// Fields Data and Blake2B are
+	// for just a single chunk.
+	Data []byte `protobuf:"bytes,6,opt,name=Data,json=data,proto3" json:"Data,omitempty"`
+	// gRPC guarantees in-order delivery
+	// of the stream, so ChunkNumber
+	// somewhat redundant. It is still
+	// useful for/as a delivery progress
+	// meter.
 	ChunkNumber int64 `protobuf:"varint,7,opt,name=ChunkNumber,json=chunkNumber,proto3" json:"ChunkNumber,omitempty"`
 	// Be sure to set IsLastChunk to true
 	// if this is the last chunk.
