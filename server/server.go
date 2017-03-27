@@ -144,7 +144,8 @@ func main() {
 	myflags := flag.NewFlagSet(ProgramName, flag.ContinueOnError)
 	cfg := &ServerConfig{}
 	cfg.DefineFlags(myflags)
-	err := myflags.Parse(os.Args[1:])
+	args := os.Args[1:]
+	err := myflags.Parse(args)
 	_ = err
 	// ignore errors so that -adduser can work, when passing os.Args[1:]
 	// to the serverSshMain().
@@ -188,7 +189,8 @@ func main() {
 		opts = []grpc.ServerOption{grpc.Creds(creds)}
 	} else {
 		// use SSH
-		err = serverSshMain(os.Args[1:], cfg.Host,
+		args = subtractArg(args, "-ssh")
+		err = serverSshMain(args, cfg.Host,
 			cfg.ExternalLsnPort, cfg.InternalLsnPort)
 		panicOn(err)
 	}
@@ -203,4 +205,13 @@ func blake2bOfBytes(by []byte) []byte {
 	panicOn(err)
 	h.Write(by)
 	return []byte(h.Sum(nil))
+}
+
+func subtractArg(args []string, excludeMe string) (res []string) {
+	for _, v := range args {
+		if v != excludeMe {
+			res = append(res, v)
+		}
+	}
+	return
 }
