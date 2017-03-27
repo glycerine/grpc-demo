@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"hash"
 	"io"
 	"log"
 	"net"
@@ -21,20 +20,10 @@ import (
 	pb "github.com/glycerine/grpc-demo/streambigfile"
 )
 
-type PeerServer struct {
-	hasher hash.Hash
-}
+type PeerServer struct{}
 
 func NewPeerServer() *PeerServer {
-	h, err := blake2b.New(nil)
-	panicOn(err)
-	return &PeerServer{
-		hasher: h,
-	}
-}
-
-func (s *PeerServer) Reset() {
-	s.hasher.Reset()
+	return &PeerServer{}
 }
 
 // implement pb.PeerServer interface
@@ -43,7 +32,11 @@ func (s *PeerServer) SendFile(stream pb.Peer_SendFileServer) error {
 	var chunkCount int64
 	path := ""
 	var bc int64
-	s.Reset()
+
+	hasher, err := blake2b.New(nil)
+	if err != nil {
+		return err
+	}
 
 	var finalChecksum []byte
 	var fd *os.File
@@ -65,7 +58,7 @@ func (s *PeerServer) SendFile(stream pb.Peer_SendFileServer) error {
 				// we are assuming that this never happens!
 				panic("we need to save this last chunk too!")
 			}
-			finalChecksum = []byte(s.hasher.Sum(nil))
+			finalChecksum = []byte(hasher.Sum(nil))
 			endTime := time.Now()
 			return stream.SendAndClose(&pb.BigFileAck{
 				Filepath:         path,
@@ -89,8 +82,8 @@ func (s *PeerServer) SendFile(stream pb.Peer_SendFileServer) error {
 			firstChunkSeen = true
 		}
 
-		s.hasher.Write(nk.Data)
-		cumul := []byte(s.hasher.Sum(nil))
+		hasher.Write(nk.Data)
+		cumul := []byte(hasher.Sum(nil))
 		if 0 != bytes.Compare(cumul, nk.Blake2BCumulative) {
 			return fmt.Errorf("cumulative checksums failed at chunk %v of '%s'. Observed: '%x', expected: '%x'.", nk.ChunkNumber, nk.Filepath, cumul, nk.Blake2BCumulative)
 		}
