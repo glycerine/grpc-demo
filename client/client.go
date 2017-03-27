@@ -52,7 +52,7 @@ func (c *client) runSendFile(client pb.PeerClient, path string, data []byte, max
 	}
 	nextByte := 0
 	lastChunk := numChunk - 1
-	p("client sees %v chunks of size ~ %v bytes", numChunk, maxChunkSize)
+	p("'%s' client sees %v chunks of size ~ %v bytes", path, numChunk, maxChunkSize)
 	for i := 0; i < numChunk; i++ {
 		sendLen := intMin(maxChunkSize, n-(i*maxChunkSize))
 		chunk := data[nextByte:(nextByte + sendLen)]
@@ -73,7 +73,9 @@ func (c *client) runSendFile(client pb.PeerClient, path string, data []byte, max
 		c.nextChunk++
 		nk.IsLastChunk = (i == lastChunk)
 
-		p("client, on chunk %v of '%s', checksum='%x', and cumul='%x'", nk.ChunkNumber, nk.Filepath, nk.Blake2B, nk.Blake2BCumulative)
+		if nk.ChunkNumber%100 == 0 {
+			p("client, on chunk %v of '%s', checksum='%x', and cumul='%x'", nk.ChunkNumber, nk.Filepath, nk.Blake2B, nk.Blake2BCumulative)
+		}
 
 		if err := stream.Send(&nk); err != nil {
 			// EOF?
@@ -183,6 +185,7 @@ func main() {
 	c2done := make(chan struct{})
 
 	testOverlappingSends := true
+	//testOverlappingSends := false
 
 	// overlap two sends to different paths
 	go func() {
