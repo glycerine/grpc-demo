@@ -39,14 +39,19 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 type BigFileChunk struct {
 	// Filepath is just an arbitrary
 	// name for this file.
-	Filepath    string `protobuf:"bytes,1,opt,name=Filepath,json=filepath,proto3" json:"Filepath,omitempty"`
-	SizeInBytes int64  `protobuf:"varint,2,opt,name=SizeInBytes,json=sizeInBytes,proto3" json:"SizeInBytes,omitempty"`
-	SendTime    uint64 `protobuf:"fixed64,3,opt,name=SendTime,json=sendTime,proto3" json:"SendTime,omitempty"`
+	Filepath string `protobuf:"bytes,1,opt,name=Filepath,json=filepath,proto3" json:"Filepath,omitempty"`
+	// SizeInBytes should match
+	// len(Data) exactly.
+	SizeInBytes int64 `protobuf:"varint,2,opt,name=SizeInBytes,json=sizeInBytes,proto3" json:"SizeInBytes,omitempty"`
+	// According to the sender's clock,
+	// when did this chunk get put
+	// on the wire?
+	SendTime uint64 `protobuf:"fixed64,3,opt,name=SendTime,json=sendTime,proto3" json:"SendTime,omitempty"`
 	// Blake2B checksum of Data.
 	Blake2B []byte `protobuf:"bytes,4,opt,name=Blake2B,json=blake2B,proto3" json:"Blake2B,omitempty"`
 	// Cumulative Blake2B of all
-	// Chunks up to and including
-	// this one.
+	// Chunks of the file, up to
+	// and including this one.
 	Blake2BCumulative []byte `protobuf:"bytes,5,opt,name=Blake2BCumulative,json=blake2BCumulative,proto3" json:"Blake2BCumulative,omitempty"`
 	// How big can Data be? I
 	// recommend no more than 1MB.
@@ -60,8 +65,8 @@ type BigFileChunk struct {
 	// for just a single chunk.
 	Data []byte `protobuf:"bytes,6,opt,name=Data,json=data,proto3" json:"Data,omitempty"`
 	// gRPC guarantees in-order delivery
-	// of the stream, so ChunkNumber
-	// somewhat redundant. It is still
+	// of the stream, so ChunkNumber may
+	// seem unnecessary. It is still
 	// useful for/as a delivery progress
 	// meter.
 	ChunkNumber int64 `protobuf:"varint,7,opt,name=ChunkNumber,json=chunkNumber,proto3" json:"ChunkNumber,omitempty"`
