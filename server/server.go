@@ -212,13 +212,10 @@ func main() {
 		opts = []grpc.ServerOption{grpc.Creds(creds)}
 	} else {
 		// use SSH
-		if false {
-			// try using the built in C sshd instead of our own.
-			args = subtractArg(args, "-ssh")
-			err = serverSshMain(args, cfg.Host,
-				cfg.ExternalLsnPort, cfg.InternalLsnPort)
-			panicOn(err)
-		}
+		args = subtractArg(args, "-ssh")
+		err = serverSshMain(args, cfg.Host,
+			cfg.ExternalLsnPort, cfg.InternalLsnPort)
+		panicOn(err)
 	}
 
 	grpcServer := grpc.NewServer(opts...)
