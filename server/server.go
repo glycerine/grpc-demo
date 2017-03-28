@@ -169,7 +169,7 @@ func main() {
 
 	var gRpcBindPort int
 	var gRpcHost string
-	if !cfg.Ssh {
+	if cfg.UseTLS {
 		// use TLS
 		gRpcBindPort = cfg.ExternalLsnPort
 		gRpcHost = cfg.Host
@@ -192,7 +192,7 @@ func main() {
 
 	var opts []grpc.ServerOption
 
-	if !cfg.Ssh {
+	if cfg.UseTLS {
 		// use TLS
 		creds, err := credentials.NewServerTLSFromFile(cfg.CertPath, cfg.KeyPath)
 		if err != nil {

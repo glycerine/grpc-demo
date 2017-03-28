@@ -165,10 +165,10 @@ func main() {
 	}
 
 	var opts []grpc.DialOption
-	if cfg.Ssh {
-		cfg.setupSSH(&opts)
-	} else {
+	if cfg.UseTLS {
 		cfg.setupTLS(&opts)
+	} else {
+		cfg.setupSSH(&opts)
 	}
 
 	serverAddr := fmt.Sprintf("%v:%v", cfg.ServerHost, cfg.ServerPort)
