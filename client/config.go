@@ -20,6 +20,8 @@ type ClientConfig struct {
 	Username             string
 	PrivateKeyPath       string
 	ClientKnownHostsPath string
+
+	CpuProfilePath string
 }
 
 func (c *ClientConfig) DefineFlags(fs *flag.FlagSet) {
@@ -40,6 +42,7 @@ func (c *ClientConfig) DefineFlags(fs *flag.FlagSet) {
 	fs.StringVar(&c.PrivateKeyPath, "key", home+"/.ssh/.sshego.sshd.db/users/"+user+"/id_rsa", "private key for sshd login")
 	fs.StringVar(&c.ClientKnownHostsPath, "known-hosts", home+"/.ssh/.sshego.cli.known.hosts", "path to our own known-hosts file, for sshd login")
 
+	fs.StringVar(&c.CpuProfilePath, "cpuprofile", "", "write cpu profile to file")
 }
 
 func (c *ClientConfig) ValidateConfig() error {

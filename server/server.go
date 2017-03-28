@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"runtime/pprof"
 	"time"
 
 	"google.golang.org/grpc"
@@ -149,6 +150,15 @@ func main() {
 	_ = err
 	// ignore errors so that -adduser can work, when passing os.Args[1:]
 	// to the serverSshMain().
+
+	if cfg.CpuProfilePath != "" {
+		f, err := os.Create(cfg.CpuProfilePath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
 
 	err = cfg.ValidateConfig()
 	if err != nil {

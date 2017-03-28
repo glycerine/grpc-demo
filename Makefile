@@ -1,5 +1,5 @@
 all:
-	cd streambigfile && make
+	#cd streambigfile && make
 	cd client && go build
 	cd server && go build
 

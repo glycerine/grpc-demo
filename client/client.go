@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"runtime/pprof"
 	"time"
 
 	"github.com/glycerine/blake2b" // vendor https://github.com/dchest/blake2b"
@@ -146,6 +147,15 @@ func main() {
 		log.Fatalf("%s command line flag error: '%s'", ProgramName, err)
 	}
 
+	if cfg.CpuProfilePath != "" {
+		f, err := os.Create(cfg.CpuProfilePath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
+
 	err = cfg.ValidateConfig()
 	if err != nil {
 		log.Fatalf("%s command line flag error: '%s'", ProgramName, err)
@@ -185,19 +195,23 @@ func main() {
 
 	c2done := make(chan struct{})
 
+	overlap := false
+
 	// overlap two sends to different paths
 	go func() {
-		time.Sleep(10 * time.Millisecond)
-		p("after 10msec of sleep, comencing bigfile3...")
+		if overlap {
+			time.Sleep(10 * time.Millisecond)
+			p("after 10msec of sleep, comencing bigfile3...")
 
-		c2 := newClient(conn)
-		t0 := time.Now()
-		err = c2.runSendFile("bigfile3", data3, chunkSz)
-		t1 := time.Now()
-		panicOn(err)
-		mb := float64(len(data3)) / float64(1<<20)
-		elap := t1.Sub(t0)
-		p("c2: elap time to send %v MB was %v => %.03f MB/sec", mb, elap, mb/(float64(elap)/1e9))
+			c2 := newClient(conn)
+			t0 := time.Now()
+			err = c2.runSendFile("bigfile3", data3, chunkSz)
+			t1 := time.Now()
+			panicOn(err)
+			mb := float64(len(data3)) / float64(1<<20)
+			elap := t1.Sub(t0)
+			p("c2: elap time to send %v MB was %v => %.03f MB/sec", mb, elap, mb/(float64(elap)/1e9))
+		}
 		close(c2done)
 	}()
 

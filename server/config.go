@@ -17,6 +17,7 @@ type ServerConfig struct {
 
 	ExternalLsnPort int
 	InternalLsnPort int
+	CpuProfilePath  string
 }
 
 func (c *ServerConfig) DefineFlags(fs *flag.FlagSet) {
@@ -26,6 +27,7 @@ func (c *ServerConfig) DefineFlags(fs *flag.FlagSet) {
 	fs.StringVar(&c.Host, "host", "127.0.0.1", "host IP address or name to bind")
 	fs.IntVar(&c.ExternalLsnPort, "xport", 10000, "The exteral server port")
 	fs.IntVar(&c.InternalLsnPort, "iport", 10001, "The internal server port")
+	fs.StringVar(&c.CpuProfilePath, "cpuprofile", "", "write cpu profile to file")
 }
 
 func (c *ServerConfig) ValidateConfig() error {
