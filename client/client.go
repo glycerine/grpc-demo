@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
 	"flag"
 	"fmt"
@@ -10,32 +11,32 @@ import (
 	"runtime/pprof"
 	"time"
 
-	//"hash"
-	//"github.com/glycerine/blake2b" // vendor https://github.com/dchest/blake2b"
+	"github.com/glycerine/blake2b" // vendor https://github.com/dchest/blake2b"
 	pb "github.com/glycerine/grpc-demo/streambigfile"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
+	"hash"
 )
 
 type client struct {
-	//hasher     hash.Hash
+	hasher     hash.Hash
 	nextChunk  int64
 	peerClient pb.PeerClient
 }
 
 func newClient(conn *grpc.ClientConn) *client {
-	//	h, err := blake2b.New(nil)
-	//	panicOn(err)
+	h, err := blake2b.New(nil)
+	panicOn(err)
 	return &client{
-		//hasher:     h,
+		hasher:     h,
 		peerClient: pb.NewPeerClient(conn),
 	}
 }
 
 func (c *client) startNewFile() {
-	//c.hasher.Reset()
+	c.hasher.Reset()
 	c.nextChunk = 0
 }
 
@@ -66,9 +67,9 @@ func (c *client) runSendFile(path string, data []byte, maxChunkSize int) error {
 		nk.SendTime = uint64(time.Now().UnixNano())
 
 		// checksums
-		//c.hasher.Write(chunk)
-		//nk.Blake2B = blake2bOfBytes(chunk)
-		//nk.Blake2BCumulative = []byte(c.hasher.Sum(nil))
+		c.hasher.Write(chunk)
+		nk.Blake2B = blake2bOfBytes(chunk)
+		nk.Blake2BCumulative = []byte(c.hasher.Sum(nil))
 
 		nk.Data = chunk
 		nk.ChunkNumber = c.nextChunk
@@ -97,10 +98,10 @@ func (c *client) runSendFile(path string, data []byte, maxChunkSize int) error {
 	if err != nil {
 		grpclog.Fatalf("%v.CloseAndRecv() got error %v, want %v", stream, err, nil)
 	}
-	/*
-		compared := bytes.Compare(reply.WholeFileBlake2B, []byte(c.hasher.Sum(nil)))
-		grpclog.Printf("Reply saw checksum: '%x' match: %v; size sent = %v, size received = %v", reply.WholeFileBlake2B, compared == 0, len(data), reply.SizeInBytes)
-	*/
+
+	compared := bytes.Compare(reply.WholeFileBlake2B, []byte(c.hasher.Sum(nil)))
+	grpclog.Printf("Reply saw checksum: '%x' match: %v; size sent = %v, size received = %v", reply.WholeFileBlake2B, compared == 0, len(data), reply.SizeInBytes)
+
 	if int64(len(data)) != reply.SizeInBytes {
 		panic("size mismatch")
 	}
@@ -108,14 +109,13 @@ func (c *client) runSendFile(path string, data []byte, maxChunkSize int) error {
 	return nil
 }
 
-/*
 func blake2bOfBytes(by []byte) []byte {
 	h, err := blake2b.New(nil)
 	panicOn(err)
 	h.Write(by)
 	return []byte(h.Sum(nil))
 }
-*/
+
 func intMin(a, b int) int {
 	if a < b {
 		return a

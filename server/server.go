@@ -22,9 +22,7 @@ import (
 	pb "github.com/glycerine/grpc-demo/streambigfile"
 )
 
-type PeerServer struct {
-	UseBlake2b bool
-}
+type PeerServer struct{}
 
 func NewPeerServer() *PeerServer {
 	return &PeerServer{}
@@ -39,11 +37,9 @@ func (s *PeerServer) SendFile(stream pb.Peer_SendFileServer) error {
 	var hasher hash.Hash
 	var err error
 
-	if s.UseBlake2b {
-		hasher, err = blake2b.New(nil)
-		if err != nil {
-			return err
-		}
+	hasher, err = blake2b.New(nil)
+	if err != nil {
+		return err
 	}
 
 	var finalChecksum []byte
@@ -66,9 +62,7 @@ func (s *PeerServer) SendFile(stream pb.Peer_SendFileServer) error {
 				// we are assuming that this never happens!
 				panic("we need to save this last chunk too!")
 			}
-			if s.UseBlake2b {
-				finalChecksum = []byte(hasher.Sum(nil))
-			}
+			finalChecksum = []byte(hasher.Sum(nil))
 			endTime := time.Now()
 			return stream.SendAndClose(&pb.BigFileAck{
 				Filepath:         path,
@@ -92,12 +86,10 @@ func (s *PeerServer) SendFile(stream pb.Peer_SendFileServer) error {
 			firstChunkSeen = true
 		}
 
-		if s.UseBlake2b {
-			hasher.Write(nk.Data)
-			cumul := []byte(hasher.Sum(nil))
-			if 0 != bytes.Compare(cumul, nk.Blake2BCumulative) {
-				return fmt.Errorf("cumulative checksums failed at chunk %v of '%s'. Observed: '%x', expected: '%x'.", nk.ChunkNumber, nk.Filepath, cumul, nk.Blake2BCumulative)
-			}
+		hasher.Write(nk.Data)
+		cumul := []byte(hasher.Sum(nil))
+		if 0 != bytes.Compare(cumul, nk.Blake2BCumulative) {
+			return fmt.Errorf("cumulative checksums failed at chunk %v of '%s'. Observed: '%x', expected: '%x'.", nk.ChunkNumber, nk.Filepath, cumul, nk.Blake2BCumulative)
 		}
 		if path == "" {
 			path = nk.Filepath
@@ -111,15 +103,12 @@ func (s *PeerServer) SendFile(stream pb.Peer_SendFileServer) error {
 			return fmt.Errorf("%v == nk.SizeInBytes != int64(len(nk.Data)) == %v", nk.SizeInBytes, int64(len(nk.Data)))
 		}
 
-		/*
-			if s.UseBlake2b {
-				checksum := blake2bOfBytes(nk.Data)
-				cmp := bytes.Compare(checksum, nk.Blake2B)
-				if cmp != 0 {
-					return fmt.Errorf("chunk %v bad .Data, checksum mismatch!",
-						nk.ChunkNumber)
-				}
-			}*/
+		checksum := blake2bOfBytes(nk.Data)
+		cmp := bytes.Compare(checksum, nk.Blake2B)
+		if cmp != 0 {
+			return fmt.Errorf("chunk %v bad .Data, checksum mismatch!",
+				nk.ChunkNumber)
+		}
 		// INVAR: chunk passes tests, keep it.
 
 		bc += nk.SizeInBytes
@@ -223,14 +212,12 @@ func main() {
 	grpcServer.Serve(lis)
 }
 
-/*
 func blake2bOfBytes(by []byte) []byte {
 	h, err := blake2b.New(nil)
 	panicOn(err)
 	h.Write(by)
 	return []byte(h.Sum(nil))
 }
-*/
 
 func subtractArg(args []string, excludeMe string) (res []string) {
 	for _, v := range args {
