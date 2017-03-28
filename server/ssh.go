@@ -36,14 +36,13 @@ import (
 	tun "github.com/glycerine/sshego"
 )
 
-func serverSshMain(args []string, host string, securedPort, targetPort int) error {
-
-	myflags := flag.NewFlagSet(ProgramName, flag.ContinueOnError)
+func setupSshFlags(myflags *flag.FlagSet) *tun.SshegoConfig {
 	cfg := tun.NewSshegoConfig()
 	cfg.DefineFlags(myflags)
+	return cfg
+}
 
-	// ignore errors here
-	myflags.Parse(args)
+func serverSshMain(cfg *tun.SshegoConfig, host string, securedPort, targetPort int) error {
 
 	if cfg.ShowVersion {
 		fmt.Printf("\n%v\n", tun.SourceVersion())

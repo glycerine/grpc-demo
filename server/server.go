@@ -144,14 +144,14 @@ const ProgramName = "server"
 
 func main() {
 
-	myflags := flag.NewFlagSet(ProgramName, flag.ContinueOnError)
+	myflags := flag.NewFlagSet(ProgramName, flag.ExitOnError)
 	cfg := &ServerConfig{}
 	cfg.DefineFlags(myflags)
+
+	sshegoCfg := setupSshFlags(myflags)
+
 	args := os.Args[1:]
 	err := myflags.Parse(args)
-	_ = err
-	// ignore errors so that -adduser can work, when passing os.Args[1:]
-	// to the serverSshMain().
 
 	if cfg.CpuProfilePath != "" {
 		f, err := os.Create(cfg.CpuProfilePath)
@@ -201,8 +201,7 @@ func main() {
 		opts = []grpc.ServerOption{grpc.Creds(creds)}
 	} else {
 		// use SSH
-		args = subtractArg(args, "-ssh")
-		err = serverSshMain(args, cfg.Host,
+		err = serverSshMain(sshegoCfg, cfg.Host,
 			cfg.ExternalLsnPort, cfg.InternalLsnPort)
 		panicOn(err)
 	}
