@@ -198,7 +198,7 @@ func main() {
 
 	c2done := make(chan struct{})
 
-	overlap := false
+	overlap := true
 
 	// overlap two sends to different paths
 	go func() {
