@@ -41,7 +41,7 @@ import (
  elap time to send 512 MB was 13.484078385s => 37.971 MB/sec
  elap time to send 512 MB was 10.078974477s => 50.799 MB/sec
 */
-func clientSshMain(trustNewServer bool, rsaPrivateKeyPath, knownHostsPath, username, host, destHostPort string, serverExternalPort int64) (func(string, time.Duration) (net.Conn, error), error) {
+func clientSshMain(trustNewServer, testAllowOneshotConnect bool, rsaPrivateKeyPath, knownHostsPath, username, host, destHostPort string, serverExternalPort int64) (func(string, time.Duration) (net.Conn, error), error) {
 
 	dc := tun.DialConfig{
 		ClientKnownHostsPath: knownHostsPath,
@@ -54,7 +54,8 @@ func clientSshMain(trustNewServer bool, rsaPrivateKeyPath, knownHostsPath, usern
 		DownstreamHostPort:   destHostPort,
 		Verbose:              false,
 
-		TofuAddIfNotKnown: trustNewServer,
+		TofuAddIfNotKnown:       trustNewServer,
+		TestAllowOneshotConnect: testAllowOneshotConnect,
 	}
 
 	f := func(addr string, dur time.Duration) (net.Conn, error) {

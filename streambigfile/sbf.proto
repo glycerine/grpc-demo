@@ -14,6 +14,7 @@ message BigFileChunk {
     // when did this chunk get put
     // on the wire?
     fixed64   SendTime    = 3;
+    fixed64   OriginalStartSendTime    = 10;
 
     // Blake2B checksum of Data.
     bytes     Blake2B     = 4;
@@ -45,6 +46,9 @@ message BigFileChunk {
     // Be sure to set IsLastChunk to true
     // if this is the last chunk.
     bool      IsLastChunk = 8;
+
+    // IsBcastSetRequest? (else by default it is a BcastGetReply)
+    bool      IsBcastSet = 9;
 }
 
 message BigFileAck {
@@ -56,5 +60,7 @@ message BigFileAck {
 }
 
 service Peer {
+
+    // client always sends a big file to the server.
     rpc SendFile(stream BigFileChunk) returns (BigFileAck) {}
 }
