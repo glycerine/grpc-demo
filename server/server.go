@@ -164,6 +164,10 @@ func (s *PeerServerClass) SendFile(stream pb.Peer_SendFileServer) (err error) {
 		bytesSeen += int64(len(nk.Data))
 		chunkCount++
 
+		// TODO: user should store chunk somewhere here... or accumulate
+		// all the chunks in memory
+		// until ready to store it elsewhere; e.g. in boltdb.
+
 		if writeFileToDisk {
 			err = writeToFd(fd, nk.Data)
 			if err != nil {
@@ -178,7 +182,9 @@ func (s *PeerServerClass) SendFile(stream pb.Peer_SendFileServer) (err error) {
 			panic("short write to bytes.Buffer")
 		}
 
-		if nk.IsLastChunk {
+		// disableFinalWrite == true for demo purposes...
+		const disableFinalWrite = true
+		if !disableFinalWrite && nk.IsLastChunk {
 
 			kiBytes := allChunks.Bytes()
 

@@ -22,7 +22,9 @@ const ProgramName = "server"
 func main() {
 
 	myflags := flag.NewFlagSet(ProgramName, flag.ExitOnError)
-	cfg := &ServerConfig{}
+	cfg := &ServerConfig{
+		SkipEncryption: true,
+	}
 	cfg.DefineFlags(myflags)
 
 	sshegoCfg := setupSshFlags(myflags)

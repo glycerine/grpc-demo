@@ -32,7 +32,9 @@ const ProgramName = "client"
 func main() {
 
 	myflags := flag.NewFlagSet(ProgramName, flag.ContinueOnError)
-	cfg := &ClientConfig{}
+	cfg := &ClientConfig{
+		SkipEncryption: true,
+	}
 	cfg.DefineFlags(myflags)
 	err := myflags.Parse(os.Args[1:])
 	if err != nil {
@@ -70,7 +72,7 @@ func main() {
 
 	// SendFile
 	c := newClient(conn)
-	isBcastSet := true
+	isBcastSet := false
 	myID := "test-client-0"
 	data := []byte("hello peer, it is nice to meet you!!")
 	err = c.runSendFile("file1", data, 3, isBcastSet, myID)
@@ -89,7 +91,7 @@ func main() {
 
 	c2done := make(chan struct{})
 
-	overlap := true
+	overlap := false
 
 	// overlap two sends to different paths
 	go func() {
@@ -99,6 +101,7 @@ func main() {
 
 			c2 := newClient(conn)
 			t0 := time.Now()
+
 			err = c2.runSendFile("bigfile3", data3, chunkSz, isBcastSet, myID)
 			t1 := time.Now()
 			panicOn(err)
