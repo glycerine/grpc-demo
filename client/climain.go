@@ -32,10 +32,10 @@ const ProgramName = "client"
 func main() {
 
 	myflags := flag.NewFlagSet(ProgramName, flag.ContinueOnError)
-	cfg := &ClientConfig{
-		SkipEncryption: true,
-	}
+	cfg := &ClientConfig{}
 	cfg.DefineFlags(myflags)
+	cfg.SkipEncryption = true
+
 	err := myflags.Parse(os.Args[1:])
 	if err != nil {
 		log.Fatalf("%s command line flag error: '%s'", ProgramName, err)
@@ -58,6 +58,10 @@ func main() {
 	var opts []grpc.DialOption
 	if cfg.UseTLS {
 		cfg.setupTLS(&opts)
+	} else if cfg.SkipEncryption {
+		// no encryption
+		opts = append(opts, grpc.WithInsecure())
+		p("client configured to skip encryption.")
 	} else {
 		cfg.setupSSH(&opts)
 	}

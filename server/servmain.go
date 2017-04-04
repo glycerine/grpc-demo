@@ -22,10 +22,9 @@ const ProgramName = "server"
 func main() {
 
 	myflags := flag.NewFlagSet(ProgramName, flag.ExitOnError)
-	cfg := &ServerConfig{
-		SkipEncryption: true,
-	}
+	cfg := &ServerConfig{}
 	cfg.DefineFlags(myflags)
+	cfg.SkipEncryption = true
 
 	sshegoCfg := setupSshFlags(myflags)
 
@@ -55,6 +54,11 @@ func main() {
 
 		p("gRPC with TLS listening on %v:%v", gRpcHost, gRpcBindPort)
 
+	} else if cfg.SkipEncryption {
+		// no encryption at all
+		gRpcBindPort = cfg.ExternalLsnPort
+		gRpcHost = cfg.Host
+
 	} else {
 		// SSH will take the external, gRPC will take the internal.
 		gRpcBindPort = cfg.InternalLsnPort
@@ -78,7 +82,11 @@ func main() {
 			utclog.Fatalf("Failed to generate credentials %v", err)
 		}
 		opts = []grpc.ServerOption{grpc.Creds(creds)}
+	} else if cfg.SkipEncryption {
+		// no encryption
+		p("server configured to skip encryption.")
 	} else {
+
 		// use SSH
 		err = serverSshMain(sshegoCfg, cfg.Host,
 			cfg.ExternalLsnPort, cfg.InternalLsnPort)
