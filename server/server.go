@@ -25,12 +25,6 @@ import (
 	pb "github.com/glycerine/grpc-demo/streambigfile"
 )
 
-var utclog *log.Logger
-
-func init() {
-	utclog = log.New(os.Stderr, "", log.LUTC|log.LstdFlags|log.Lmicroseconds)
-}
-
 type PeerServerClass struct {
 	lgs                api.LocalGetSet
 	cfg                *ServerConfig
@@ -59,7 +53,7 @@ func (s *PeerServerClass) IncrementGotFileCount() {
 //  because the client called SendFile() on the other end.
 //
 func (s *PeerServerClass) SendFile(stream pb.Peer_SendFileServer) (err error) {
-	utclog.Printf("%s peer.Server SendFile (for receiving a file) starting!", s.cfg.MyID)
+	log.Printf("%s peer.Server SendFile (for receiving a file) starting!", s.cfg.MyID)
 	var chunkCount int64
 	path := ""
 	var hasher hash.Hash
@@ -82,7 +76,7 @@ func (s *PeerServerClass) SendFile(stream pb.Peer_SendFileServer) (err error) {
 		finalChecksum = []byte(hasher.Sum(nil))
 		endTime := time.Now()
 
-		utclog.Printf("%s this server.SendFile() call got %v chunks, byteCount=%v. with final checksum '%x'. defer running/is returning with err='%v'", s.cfg.MyID, chunkCount, bytesSeen, finalChecksum, err)
+		log.Printf("%s this server.SendFile() call got %v chunks, byteCount=%v. with final checksum '%x'. defer running/is returning with err='%v'", s.cfg.MyID, chunkCount, bytesSeen, finalChecksum, err)
 		errStr := ""
 		if err != nil {
 			errStr = err.Error()
@@ -96,7 +90,7 @@ func (s *PeerServerClass) SendFile(stream pb.Peer_SendFileServer) (err error) {
 			Err:              errStr,
 		})
 		if sacErr != nil {
-			utclog.Printf("warning: sacErr='%s' in gserv server.go PeerServerClass.SendFile() attempt to stream.SendAndClose().", sacErr)
+			log.Printf("warning: sacErr='%s' in gserv server.go PeerServerClass.SendFile() attempt to stream.SendAndClose().", sacErr)
 		}
 	}()
 
@@ -196,7 +190,7 @@ func (s *PeerServerClass) SendFile(stream pb.Peer_SendFileServer) (err error) {
 					return fmt.Errorf("gserv/server.go SendFile(): req.UnmarshalMsg() errored '%v'", err)
 				}
 
-				utclog.Printf("%s sees last chunk of file with nk.OriginalStartSendTime='%v'. Received from a BcastSet() call [isBcastSet=%v]. Got request from '%s' to set key '%s' with data of len %v. checksum='%x'.", s.cfg.MyID, time.Unix(0, int64(nk.OriginalStartSendTime)).UTC(), isBcastSet, req.FromID, req.Ki.Key, len(req.Ki.Val), nk.Blake2BCumulative)
+				log.Printf("%s sees last chunk of file with nk.OriginalStartSendTime='%v'. Received from a BcastSet() call [isBcastSet=%v]. Got request from '%s' to set key '%s' with data of len %v. checksum='%x'.", s.cfg.MyID, time.Unix(0, int64(nk.OriginalStartSendTime)).UTC(), isBcastSet, req.FromID, req.Ki.Key, len(req.Ki.Val), nk.Blake2BCumulative)
 
 				s.IncrementGotFileCount()
 
@@ -215,7 +209,7 @@ func (s *PeerServerClass) SendFile(stream pb.Peer_SendFileServer) (err error) {
 					return fmt.Errorf("gserv/server.go SendFile(): reply.UnmarshalMsg() errored '%v'", err)
 				}
 
-				utclog.Printf("%s sees last chunk of file with nk.OriginalStartSendTime='%v'. Received from a BcastGet() call [isBcastSet=%v]. got request from '%s' to set key '%s' with data of len %v. checksum='%x'.", s.cfg.MyID, time.Unix(0, int64(nk.OriginalStartSendTime)).UTC(), isBcastSet, reply.FromID, reply.Ki.Key, len(reply.Ki.Val), nk.Blake2BCumulative)
+				log.Printf("%s sees last chunk of file with nk.OriginalStartSendTime='%v'. Received from a BcastGet() call [isBcastSet=%v]. got request from '%s' to set key '%s' with data of len %v. checksum='%x'.", s.cfg.MyID, time.Unix(0, int64(nk.OriginalStartSendTime)).UTC(), isBcastSet, reply.FromID, reply.Ki.Key, len(reply.Ki.Val), nk.Blake2BCumulative)
 
 				// notify peer by sending on cfg.ServerGotGetReply
 				select {
@@ -245,7 +239,7 @@ func MainExample() {
 	if cfg.CpuProfilePath != "" {
 		f, err := os.Create(cfg.CpuProfilePath)
 		if err != nil {
-			utclog.Fatal(err)
+			log.Fatal(err)
 		}
 		pprof.StartCPUProfile(f)
 		defer pprof.StopCPUProfile()
@@ -253,7 +247,7 @@ func MainExample() {
 
 	err = cfg.ValidateConfig()
 	if err != nil {
-		utclog.Fatalf("%s command line flag error: '%s'", ProgramName, err)
+		log.Fatalf("%s command line flag error: '%s'", ProgramName, err)
 	}
 	cfg.SshegoCfg = sshegoCfg
 	//	cfg.StartGrpcServer()
@@ -299,7 +293,7 @@ func (cfg *ServerConfig) StartGrpcServer(
 	}
 	lis, err := net.Listen("tcp", fmt.Sprintf("%v:%d", gRpcHost, gRpcBindPort))
 	if err != nil {
-		utclog.Fatalf("failed to listen: %v", err)
+		log.Fatalf("failed to listen: %v", err)
 	}
 
 	var opts []grpc.ServerOption
@@ -312,7 +306,7 @@ func (cfg *ServerConfig) StartGrpcServer(
 			// use TLS
 			creds, err := credentials.NewServerTLSFromFile(cfg.CertPath, cfg.KeyPath)
 			if err != nil {
-				utclog.Fatalf("Failed to generate credentials %v", err)
+				log.Fatalf("Failed to generate credentials %v", err)
 			}
 			opts = []grpc.ServerOption{grpc.Creds(creds)}
 		} else {

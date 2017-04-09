@@ -70,7 +70,7 @@ func main() {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf("%v:%d", gRpcHost, gRpcBindPort))
 	if err != nil {
-		utclog.Fatalf("failed to listen: %v", err)
+		log.Fatalf("failed to listen: %v", err)
 	}
 
 	var opts []grpc.ServerOption
@@ -79,7 +79,7 @@ func main() {
 		// use TLS
 		creds, err := credentials.NewServerTLSFromFile(cfg.CertPath, cfg.KeyPath)
 		if err != nil {
-			utclog.Fatalf("Failed to generate credentials %v", err)
+			log.Fatalf("Failed to generate credentials %v", err)
 		}
 		opts = []grpc.ServerOption{grpc.Creds(creds)}
 	} else if cfg.SkipEncryption {

@@ -70,7 +70,7 @@ func main() {
 
 	conn, err := grpc.Dial(serverAddr, opts...)
 	if err != nil {
-		utclog.Fatalf("fail to dial: %v", err)
+		log.Fatalf("fail to dial: %v", err)
 	}
 	defer conn.Close()
 
