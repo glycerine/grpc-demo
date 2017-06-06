@@ -27,6 +27,8 @@ type ClientConfig struct {
 	ClientKnownHostsPath string
 
 	CpuProfilePath string
+
+	PayloadSizeMegaBytes int
 }
 
 func (c *ClientConfig) DefineFlags(fs *flag.FlagSet) {
@@ -49,6 +51,8 @@ func (c *ClientConfig) DefineFlags(fs *flag.FlagSet) {
 	fs.StringVar(&c.ClientKnownHostsPath, "known-hosts", home+"/.ssh/.sshego.cli.known.hosts", "path to our own known-hosts file, for sshd login")
 
 	fs.StringVar(&c.CpuProfilePath, "cpuprofile", "", "write cpu profile to file")
+
+	fs.IntVar(&c.PayloadSizeMegaBytes, "payload", 128, "transfer payload size in MB (megabytes)")
 }
 
 func (c *ClientConfig) ValidateConfig() error {

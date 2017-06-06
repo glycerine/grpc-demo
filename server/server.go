@@ -67,7 +67,6 @@ func (s *PeerServerClass) SendFile(stream pb.Peer_SendFileServer) (err error) {
 	const writeFileToDisk = false
 	var fd *os.File
 	var bytesSeen int64
-	var isBcastSet bool
 
 	defer func() {
 		if fd != nil {
@@ -95,7 +94,6 @@ func (s *PeerServerClass) SendFile(stream pb.Peer_SendFileServer) (err error) {
 	}()
 
 	firstChunkSeen := false
-	var allChunks bytes.Buffer
 	var nk *pb.BigFileChunk
 
 	for {
@@ -115,7 +113,7 @@ func (s *PeerServerClass) SendFile(stream pb.Peer_SendFileServer) (err error) {
 
 		// INVAR: we have a chunk
 		if !firstChunkSeen {
-			isBcastSet = nk.IsBcastSet
+
 			if nk.Filepath != "" {
 				if writeFileToDisk {
 					fd, err = os.Create(nk.Filepath + fmt.Sprintf("__%v", time.Now()))
@@ -169,55 +167,7 @@ func (s *PeerServerClass) SendFile(stream pb.Peer_SendFileServer) (err error) {
 			}
 		}
 
-		var nw int
-		nw, err = allChunks.Write(nk.Data)
-		panicOn(err)
-		if nw != len(nk.Data) {
-			panic("short write to bytes.Buffer")
-		}
-
-		// disableFinalWrite == true for demo purposes...
-		const disableFinalWrite = true
-		if !disableFinalWrite && nk.IsLastChunk {
-
-			kiBytes := allChunks.Bytes()
-
-			if isBcastSet {
-				// is a BcastSet request
-				var req api.BcastSetRequest
-				_, err = req.UnmarshalMsg(kiBytes)
-				if err != nil {
-					return fmt.Errorf("gserv/server.go SendFile(): req.UnmarshalMsg() errored '%v'", err)
-				}
-
-				log.Printf("%s sees last chunk of file with nk.OriginalStartSendTime='%v'. Received from a BcastSet() call [isBcastSet=%v]. Got request from '%s' to set key '%s' with data of len %v. checksum='%x'.", s.cfg.MyID, time.Unix(0, int64(nk.OriginalStartSendTime)).UTC(), isBcastSet, req.FromID, req.Ki.Key, len(req.Ki.Val), nk.Blake2BCumulative)
-
-				s.IncrementGotFileCount()
-
-				// notify peer by sending on cfg.ServerGotSetRequest
-				select {
-				case s.cfg.ServerGotSetRequest <- &req:
-					//p("gserv server.go  sent BcastSetRequest on channel s.cfg.ServerGotSetRequest")
-				case <-s.cfg.Halt.ReqStop.Chan:
-				}
-
-			} else {
-				// is a BcastGet reply
-				var reply api.BcastGetReply
-				_, err = reply.UnmarshalMsg(kiBytes)
-				if err != nil {
-					return fmt.Errorf("gserv/server.go SendFile(): reply.UnmarshalMsg() errored '%v'", err)
-				}
-
-				log.Printf("%s sees last chunk of file with nk.OriginalStartSendTime='%v'. Received from a BcastGet() call [isBcastSet=%v]. got request from '%s' to set key '%s' with data of len %v. checksum='%x'.", s.cfg.MyID, time.Unix(0, int64(nk.OriginalStartSendTime)).UTC(), isBcastSet, reply.FromID, reply.Ki.Key, len(reply.Ki.Val), nk.Blake2BCumulative)
-
-				// notify peer by sending on cfg.ServerGotGetReply
-				select {
-				case s.cfg.ServerGotGetReply <- &reply:
-					//p("gserv server.go sent BcastGetReply on channel s.cfg.ServerGotReply")
-				case <-s.cfg.Halt.ReqStop.Chan:
-				}
-			}
+		if  nk.IsLastChunk {
 			return err
 		}
 

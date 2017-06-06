@@ -86,7 +86,8 @@ func main() {
 	err = c.runSendFile("file2", data2, 3, isBcastSet, myID)
 	panicOn(err)
 
-	n := 1 << 29 // test with 512MB file. Works with up to 1MB or 2MB chunks.
+	//n := 1 << 29 // test with 512MB file. Works with up to 1MB or 2MB chunks.
+	n := cfg.PayloadSizeMegaBytes * 1 << 20
 
 	p("generating test data of size %v bytes", n)
 	data3 := SequentialPayload(int64(n))
