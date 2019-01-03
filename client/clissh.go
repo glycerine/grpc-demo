@@ -28,6 +28,7 @@ SOFTWARE.
 */
 
 import (
+	"context"
 	"net"
 	//"strings"
 	"time"
@@ -59,7 +60,8 @@ func clientSshMain(trustNewServer, testAllowOneshotConnect bool, rsaPrivateKeyPa
 	}
 
 	f := func(addr string, dur time.Duration) (net.Conn, error) {
-		channelToTcpServer, _, err := dc.Dial()
+		ctx := context.Background()
+		channelToTcpServer, _, _, err := dc.Dial(ctx, nil, false)
 
 		/*
 			if strings.HasPrefix(err.Error(), "good: added "+

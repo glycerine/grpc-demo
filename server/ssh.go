@@ -28,6 +28,7 @@ SOFTWARE.
 */
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -83,7 +84,7 @@ func serverSshMain(cfg *tun.SshegoConfig, host string, securedPort, targetPort i
 	}
 	cfg.NewEsshd()
 	p("grpc-demo/server/ssh.go about to call cfg.Esshd.Start()")
-	go cfg.Esshd.Start()
+	go cfg.Esshd.Start(context.Background())
 
 	return nil
 }
